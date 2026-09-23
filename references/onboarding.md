@@ -34,14 +34,26 @@
 
 | 格式 | 抽取方法 |
 |---|---|
-| `.docx` / `.doc`（最常见） | macOS：`textutil -convert txt -stdout "简历.docx" > ~/.workbuddy/daily-job-push/resume.md`；无 textutil 的环境用 python-docx（读段落拼正文） |
-| `.pdf` | WorkBuddy 内用 Read 工具直接读（支持 PDF）；其他环境有 `pdftotext` 就用它，没有就让用户粘贴文本 |
+| `.docx` / `.doc`（**首选**） | macOS：`textutil -convert txt -stdout "简历.docx" > ~/.workbuddy/daily-job-push/resume.md`；无 textutil 的环境用 python-docx（读段落拼正文）。docx 是文本容器，抽取无损 |
+| `.pdf` | 优先级：`pdftotext`（有就最好）> macOS 原生 JXA+PDFKit（命令见下）> 让用户粘贴文本。⚠️ 实测两坑：①部分环境的内置文件读取会**拒收**二进制 PDF，别指望一条路走通；②按字形定位导出的 PDF 抽取会**静默丢字**（"自动化"→"动化"），抽完必做抽歪检查 |
 | `.txt` / `.md` | 直接复制内容 |
+
+**同一版本 docx 和 pdf 并存 → 优先 docx**：pdf 常是设计/排版工具导出，丢字风险高；docx 抽取无损。实测案例：同版简历 docx 抽出 3003 字完整无损，PDF 抽出 3084 字但"自动化"变"动化"、"电话"变"话"。
+
+**macOS 原生 PDF 抽取（JXA + PDFKit，系统自带无需安装）**：
+
+```bash
+osascript -l JavaScript -e '
+ObjC.import("Quartz");
+const doc = $.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath("/path/to/简历.pdf"));
+doc.isNil() ? "EXTRACT_FAIL" : doc.string.js
+'
+```
 
 抽取规则：
 
 1. **原始文件只读不删不改**——`resume_path` 写用户的原始文件路径，抽取出的纯文本统一写入 `~/.workbuddy/daily-job-push/resume.md` 作缓存（后续运行读缓存，不重复解析）
-2. 抽取后**扫一眼开头 10 行确认没抽歪**（乱码/空白/只有页眉 → 换方法重试）
+2. 抽取后**扫一眼开头 10 行确认没抽歪**（乱码/空白/只有页眉 → 换方法重试；**常见词丢字**如"自动化"缺字 → 该文件抽取不可信，换 docx 或让用户粘贴）
 3. 加密 PDF、纯扫描件（无文字层）抽不出 → **如实说明**，请用户粘贴文本，不要硬编
 4. 用户之后给了新简历 → 重新抽取覆盖缓存，并在会话里说明"简历已更新"
 5. ⚠️ 简历内容只留本地比对用，不得写进表格、摘要或推送
