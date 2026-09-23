@@ -1,0 +1,11 @@
+{
+  "_README": "画像格式样例（不含任何真实数据）。真实画像请放 ~/.workbuddy/daily-job-push/profile.json，由技能首次运行的引导问答生成。直接拿本文件跑会因必填项为空而中止——这是有意的。",
+  "directions": [],
+  "cities": [],
+  "salary_min": null,
+  "salary_max": null,
+  "exclude_keywords": [],
+  "seniority": "",
+  "industries": [],
+  "notes": ""
+}
