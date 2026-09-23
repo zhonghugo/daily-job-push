@@ -34,7 +34,7 @@ fi
 | 配置 | 位置 | 哪些模式需要 |
 |---|---|---|
 | 求职画像 | `~/.workbuddy/daily-job-push/profile.json` | **两种模式都要** |
-| 简历 | `profile.json` 的 `resume_path` 指向的文件（默认 `~/.workbuddy/daily-job-push/resume.md`） | 可选；有简历「匹配理由」才写得准 |
+| 简历 | `profile.json` 的 `resume_path` 指向的**原始文件**（`.docx`/`.doc`/`.pdf`/`.txt`/`.md` 均可），抽取的纯文本缓存到 `~/.workbuddy/daily-job-push/resume.md` | 可选；有简历「匹配理由」才写得准 |
 | 目标表 | `~/.workbuddy/daily-job-push/target.json` | 仅 feishu 模式 |
 | 飞书授权 | `lark-cli` 已登录 | 仅 feishu 模式 |
 
@@ -68,7 +68,7 @@ echo "画像文件: $PROFILE_FILE"
 | 1/5 | **目标方向** | "想做哪类岗位？2–5 个。"附正反例：写职能（"AI 应用落地""流程自动化"），不写具体职位名（"AI 产品经理"会搜得太窄） |
 | 2/5 | **意向城市** | "在哪些城市找？支持「远程」。" |
 | 3/5 | **薪资范围** | "期望月薪区间？（单位 K）"说明：只用于打标，不做硬过滤 |
-| 4/5 | **简历** | "方便给一份简历吗？粘贴文本或给文件路径都行。"说明：匹配理由是拿简历和岗位要求对出来的，有简历才准；不愿传可跳过。拿到后存 `~/.workbuddy/daily-job-push/resume.md` 并在 profile.json 写 `resume_path` |
+| 4/5 | **简历** | "发一份简历吧——Word/PDF 直接拖进对话当附件，或粘贴文本、给文件路径都行。"说明：匹配理由是拿简历和岗位要求对出来的，有简历才准；不愿传可跳过。**附件多半是 Word/PDF，接收后按「简历转文本」抽取正文**（见 `references/onboarding.md`） |
 | 5/5 | **目标表** | **仅 feishu 模式问**。已有表格要链接；没有就按规范帮建。local 模式改为告知"结果会落本地文件"，跳过此问 |
 
 逐题规则：
@@ -80,7 +80,7 @@ echo "画像文件: $PROFILE_FILE"
 
 拿到全部回答后：
 
-1. 写 `~/.workbuddy/daily-job-push/profile.json`（格式见 `references/profile-template.md`）；简历收到时存 `~/.workbuddy/daily-job-push/resume.md` 并把 `resume_path` 写进画像——⚠️ 简历原文只留本地，**不得**原文进入表格、摘要或推送
+1. 写 `~/.workbuddy/daily-job-push/profile.json`（格式见 `references/profile-template.md`）；简历收到时：**原始文件只读不动**（复制或原地引用均可），按 `references/onboarding.md` 的「简历转文本」抽取正文，纯文本写入 `~/.workbuddy/daily-job-push/resume.md` 作缓存，`resume_path` 写用户原始文件路径——⚠️ 简历内容只留本地，**不得**原文进入表格、摘要或推送
 2. feishu 模式：写 / 建 `target.json` 与目标表（建表步骤见 `references/onboarding.md`）；local 模式：跳过，直接进主流程
 3. **汇总复述一遍配置让用户确认**，确认后再进主流程
 

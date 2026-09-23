@@ -10,7 +10,7 @@
 | `directions` | string[] | ✅ | 目标岗位方向，2–5 个。写"职能"而不是"职位名"（如 `AI应用落地`、`流程自动化`，而不是某个具体 JD 标题） |
 | `cities` | string[] | ✅ | 意向城市，支持"远程"。**这是默认值**——技能每次开跑会向用户确认当次城市（当次改动默认不写回本文件），所以这里的值定"日常基调"即可，不必频繁改 |
 | `salary_min` / `salary_max` | int | ✅ | 月薪范围下/上限（单位 K），用于生成搜索词与匹配打标，**不做硬过滤** |
-| `resume_path` | string | ❌ | 简历文件路径（默认 `~/.workbuddy/daily-job-push/resume.md`）。配置后「匹配理由」按 简历 × JD 交叉写；为空则退化为 `highlights`/`directions` 对照。简历原文只存本地，不进表格/摘要/推送 |
+| `resume_path` | string | ❌ | 用户简历**原始文件**路径（`.docx`/`.doc`/`.pdf`/`.txt`/`.md` 均可，Word/PDF 最常见）。抽取的纯文本缓存到 `~/.workbuddy/daily-job-push/resume.md`，后续运行读缓存。「匹配理由」按 简历 × JD 交叉写；为空则退化为 `highlights`/`directions` 对照。简历内容只存本地，不进表格/摘要/推送 |
 | `exclude_keywords` | string[] | ❌ | 出现在岗位名即标记"低匹配"的词（如 销售、保险、外包驻场）。只打标不删除 |
 | `seniority` | string | ❌ | 经验档位：`3-5年` / `5-10年` / `10年+` |
 | `experience` | string | ❌ | 经验背景一句话（写职能路径，不写公司名/个人信息），供 AI 写「匹配理由」时与 JD 交叉引用 |
