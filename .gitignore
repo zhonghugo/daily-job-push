@@ -1,0 +1,18 @@
+# 运行时产物（岗位数据，不该进仓库）
+jobs-*.md
+jobs-*.csv
+jobs-*.ndjson
+existing.ndjson
+new_jobs.json
+candidates.json
+keywords.txt
+summary.md
+
+# 个人配置（绝不该进仓库）
+profile.json
+target.json
+
+# 系统与缓存
+.DS_Store
+__pycache__/
+*.pyc
