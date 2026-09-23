@@ -172,12 +172,14 @@ python3 scripts/dedup_keys.py --existing existing.ndjson --candidates candidates
 
 ### 7. 写入
 
-**feishu 模式**：
+**feishu 模式**（⚠️ 实测：当前 lark-cli **没有** `+record-create`，单条/批量都用 `+record-batch-create`；select 字段传**数组**，日期带时间）：
 
 ```bash
-lark-cli base +record-create --base-token $BASE --table-id $TBL --as user \
-  --fields '{"岗位名称":"...","公司名称":"...","招聘链接":"...","薪资范围":"...","工作地点":"...","来源平台":"BOSS直聘","状态":"待投递","匹配理由":"...","岗位要点":"...","备注":"..."}'
+lark-cli base +record-batch-create --base-token $BASE --table-id $TBL --as user \
+  --json '{"create_records":[{"岗位名称":"...","公司名称":"...","招聘链接":"[查看岗位](url)","薪资范围":"...","工作地点":"...","来源平台":["BOSS直聘"],"状态":["待投递"],"匹配理由":"...","岗位要点":"...","备注":"...","发布日期":"2026-09-23 21:30"}]}'
 ```
+
+先写 1 条跑通再放量；写入命令**执行一次就够**，重跑前先回读核数，防止重复入库（实测踩过）。
 
 字段映射严格按 `references/table-schema.md`。**状态一律「待投递」**，`发布日期` 写运行当日，`来源平台` 只能写白名单值，`备注` 记抓取时间与搜索词。
 

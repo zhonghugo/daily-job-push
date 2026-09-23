@@ -37,12 +37,13 @@ TABLE_URL=$(python3 -c "import json;print(json.load(open('$HOME/.workbuddy/daily
 lark-cli base +record-list --base-token $BASE --table-id $TBL \
   --page-size 200 --format ndjson --output existing.ndjson --as user
 
-# 写单条
-lark-cli base +record-create --base-token $BASE --table-id $TBL --as user \
-  --fields '{"岗位名称":"...","公司名称":"...","招聘链接":"...","薪资范围":"...","工作地点":"...","来源平台":"BOSS直聘","状态":"待投递","匹配理由":"...","备注":"..."}'
+# 写单条也用批量命令（实测：当前 lark-cli 没有 +record-create）
+#   select 字段传数组（如 "状态":["待投递"]），datetime 传 "YYYY-MM-DD HH:mm"
+#   先写 1 条跑通，确认字段名无误再放量（字段名不匹配会整批失败）
+lark-cli base +record-batch-create --base-token $BASE --table-id $TBL --as user \
+  --json '{"create_records":[{ ...一条的字段... }]}'
 
-# 批量写多条：+record-batch-create --records '<json数组>'，每批 ≤200 条、串行执行
-#   先小批试 1 条，确认字段名无误再放量（字段名不匹配会整批失败）
+# 批量写多条：同一命令，create_records 数组放多条，每批 ≤200 条、串行执行
 
 # 回读验证：重复 record-list，diff 新增条数与链接集合
 ```

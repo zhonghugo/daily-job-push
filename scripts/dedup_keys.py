@@ -71,8 +71,8 @@ def check_link(url: str) -> str:
         return "detail" if re.search(r"/job-", path) else "unknown"
     if "zhaopin.com" in host:
         return "detail" if re.search(r"/job/[A-Za-z0-9]{6,}", path) else "search"
-    # 通用：路径里带长数字/哈希 id 视为明细页
-    return "detail" if re.search(r"/[A-Za-z0-9_-]*\d{6,}", path) else "unknown"
+    # 通用：路径里带长数字/哈希 id 视为明细页（含纯数字自增 id 与 hex 哈希 id 两种形态）
+    return "detail" if re.search(r"/[A-Za-z0-9_-]*\d{6,}", path) or re.search(r"/[a-f0-9]{16,}", path) else "unknown"
 
 def load_existing(path: str):
     keys = set()
