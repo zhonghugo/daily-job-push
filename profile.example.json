@@ -4,6 +4,7 @@
   "cities": [],
   "salary_min": null,
   "salary_max": null,
+  "resume_path": "",
   "exclude_keywords": [],
   "seniority": "",
   "industries": [],
