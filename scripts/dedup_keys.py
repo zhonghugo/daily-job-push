@@ -13,10 +13,34 @@ existing.ndjson  : lark-cli base +record-list --format ndjson 的导出（字段
 candidates.json  : [{"岗位名称":"..","公司名称":"..","招聘链接":"..","薪资范围":"..", ...}, ...]
 """
 import argparse, json, re, sys
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
-SEARCH_HINTS = ("query=", "key=", "keyword=", "searchword=", "search=", "/so/", "/list/", "/zhaopin/", "/search")
-BOT_HOSTS = ("sou.zhaopin.com", "sou.zhipin.com", "we.51job.com")
+SEARCH_HINTS = ("query=", "key=", "keyword=", "searchword=", "search=", "/so/", "/sou/", "/list/", "/zhaopin/", "/search")
+BOT_HOSTS = ("sou.zhipin.com", "we.51job.com", "www.zhaopin.com/sou")
+
+# 各平台明细页的 URL 特征（按域名登记；新增平台时在此追加一行即可）
+DETAIL_PATTERNS = {
+    "zhipin.com":   r"/job_detail/",
+    "liepin.com":   r"/(job|lptjob|a)/\d+",
+    "maimai.cn":    r"/(web/job/|web/feed/detail)",
+    "51job.com":    r"(job\d+\.html|/\d+\.html|/jobs/[^/]+/\d+\.html)",
+    "zhaopin.com":  r"(/cc[a-z]?\d+j\d+\.htm|/job/[a-z0-9]{6,})",
+    # —— 公司官网 / 官方招聘系统（域名与明细页形态都要核验，防假冒站）——
+    "tencent.com":     r"/jobdesc\.html",
+    "sf-express.com":  r"/searchjobsearchbyid/\d+",
+    "crc.com.cn":      r"/jobdetail|/position/\d+",
+    # —— 垂直 / 转载 / 聚合站（JD 完整，可当明细页用，写入时备注注明来源）——
+    "yingjiesheng.com": r"/job-",
+    "bebee.com":        r"/(cn|tw|hk|sg)/jobs/.+",
+    "rpa-learning.com": r"/jobs/.+",
+    "gdrc.org.cn":      r"/job/detail-?\d+",
+    "jrzp.com":         r"/job\d+\.shtml",
+    "quanzhi.com":      r"/job/(detail/)?[a-z0-9]{6,}",
+    "qcc.com":          r"/jobdetail/[a-z0-9]{16,}",
+    "yl1001.com":       r"jobdetail_\d+",
+}
+# 官网直招的通用明细页特征（路径里出现即视为职位详情，命中在 SEARCH_HINTS 之后判定）
+OFFICIAL_DETAIL_HINTS = r"(jobdesc\.html|/jobdetail|/job-detail|/job_desc|/position/\d+)"
 
 def norm_link(url: str) -> str:
     """去 query/fragment、去 www、小写 host、去尾斜杠 —— 同页不同参数视为同一条"""
@@ -52,27 +76,19 @@ def check_link(url: str) -> str:
     if not url:
         return "unknown"
     low = url.lower()
-    host, path = urlparse(low if "://" in low else "http://" + low).netloc, urlparse(low).path
+    parsed = urlparse(low if "://" in low else "http://" + low)
+    host = parsed.netloc
+    path = unquote(parsed.path or "")      # 解码 %XX —— 中文/长链接 slug 也能正确判定
+    # 先按域名白名单判定（域名内只有登记的形态才算明细页），再看全局搜索特征
+    for dom, pat in DETAIL_PATTERNS.items():
+        if dom in host:
+            return "detail" if re.search(pat, path) else "search"
     if any(h in host for h in BOT_HOSTS) or any(h in low for h in SEARCH_HINTS):
         return "search"
-    if "zhipin.com" in host:
-        return "detail" if "/job_detail/" in path else "search"
-    if "liepin.com" in host:
-        if "/zhaopin" in path or "/hres" in path or "/so/" in path:
-            return "search"
-        return "detail" if re.search(r"/(job|a)/\d+", path) or "/job/" in path else "search"
-    if "maimai.cn" in host:
-        return "detail" if "/web/job/" in path or "/web/feed/detail" in path else "search"
-    if "51job.com" in host:
-        if "/search" in path or "we." in host:
-            return "search"
-        return "detail" if re.search(r"job\d+\.html|/\d+\.html", path) else "unknown"
-    if "yingjiesheng.com" in host:          # 转载站，JD 完整，可当明细页
-        return "detail" if re.search(r"/job-", path) else "unknown"
-    if "zhaopin.com" in host:
-        return "detail" if re.search(r"/job/[A-Za-z0-9]{6,}", path) else "search"
+    if re.search(OFFICIAL_DETAIL_HINTS, path):
+        return "detail"
     # 通用：路径里带长数字/哈希 id 视为明细页（含纯数字自增 id 与 hex 哈希 id 两种形态）
-    return "detail" if re.search(r"/[A-Za-z0-9_-]*\d{6,}", path) or re.search(r"/[a-f0-9]{16,}", path) else "unknown"
+    return "detail" if re.search(r"/[a-z0-9_-]*\d{6,}", path) or re.search(r"/[a-f0-9]{16,}", path) else "unknown"
 
 def load_existing(path: str):
     keys = set()

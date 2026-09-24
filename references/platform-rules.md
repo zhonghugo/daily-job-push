@@ -1,15 +1,24 @@
 # 平台规则（daily-job-push）
 
-## 允许搜索的平台（白名单）
+## 允许搜索的平台（白名单 · 可扩展）
+
+**白名单是开放清单，遇到新渠道直接追加，不要因为不在表里就丢掉岗位。** 追加只需两步：①在下表加一行（域名 + 备注）；②在 `scripts/dedup_keys.py` 的 `DETAIL_PATTERNS` 里登记该站明细页的 URL 特征（一条正则），跑一遍回归。之后再遇到该站，`check_link` 就能自动判定明细页。
 
 | 平台 | 搜索域名 | 备注 |
 |---|---|---|
-| BOSS直聘 | zhipin.com | 反爬最狠，WebSearch 能拿到摘要但抓不到全部字段；抓不全就记录"待人工点开" |
-| 猎聘 | liepin.com | ⚠️ 搜索页陷阱见下 |
-| 前程无忧 | 51job.com | 补量主力，结构相对好抓 |
-| 智联招聘 | zhaopin.com | 可用，量少 |
-| 脉脉 | maimai.cn | 职位详情常藏在社区流里；搜索常只返回品牌主页/社区帖，搜不到明细页就如实说明该渠道无新增，不硬凑 |
-| 官网直招 | 各公司官网 | 只收知名公司官网 careers 页，域名必须人工核验（假冒招聘站多） |
+| BOSS直聘 | zhipin.com | 反爬最狠：明细页需登录，**WebFetch 抓不到 JD**（会返回安全验证/登录页）。能拿到链接与标题，要点字段写"未获取到JD正文（BOSS直聘需登录）"，或改用转载站补 |
+| 猎聘 | liepin.com | 可用。明细页形态：`/job/<数字>.shtml`、`/a/<数字>.shtml`、`/lptjob/<数字>/`（猎头职位）；JD 可抓 |
+| 前程无忧 | 51job.com | 补量主力，结构相对好抓；明细页 `msearch.51job.com/jobs/<城市>/<数字>.html` 也可抓 |
+| 智联招聘 | zhaopin.com | 可用。明细页：`jobs.zhaopin.com/CC<数字>J<数字>.htm`、`m.zhaopin.com/jobs/CCL<数字>J<数字>.htm`；`zhaopin.com/sou/*` 是搜索页 |
+| 脉脉 | maimai.cn | 职位详情常藏在社区流里；搜不到明细页就如实说明该渠道无新增，不硬凑 |
+| 公司官网 | 各公司官网 / careers / hr.* | 只收知名公司官网职位详情页，域名与页面形态都要人工核验（假冒招聘站多）。已登记：`hr.tencent.com/m/jobdesc.html`、`hr-new.sf-express.com/SearchJobSearchById/<id>`、`walmartchina.avature.cn/.../JobDetail/<id>` |
+| 全职招聘网 | quanzhi.com | 明细页 `/job/<长id>`、`/job/detail/<id>`；JD 完整可抓，常与智联同源 |
+| 企查查 | qcc.com | 明细页 `m.qcc.com/jobdetail/<32位id>.html`；JD 完整可抓 |
+| Bebee | bebee.com | 转载/聚合站，`/<地区>/jobs/<slug>`；JD 完整、含截止日期，可当明细页用（备注注明转载源） |
+| 广东人才招聘网 | gdrc.org.cn | 转载站 `/job/detail-<id>.html` |
+| RPA学习天地 | rpa-learning.com | RPA 行业自媒体/垂直站，`/jobs/<标题slug>`（含 URL 编码中文） |
+| 求职网 / 医械英才网 | jrzp.com / yl1001.com | 转载站，明细页 `/job<id>.shtml` / `jobdetail_<id>.htm` |
+| 自媒体渠道 | 公众号 / 小红书 / 社群 | 常只有截图或转述：**链接字段填该条信息可回溯的原始出处**（公众号文章链接或平台明细页），来源平台记"自媒体"，备注写明渠道名；无法回溯链接的按「定位链接」处理 |
 
 ## 禁用平台（历史踩坑，勿再试）
 
@@ -58,9 +67,42 @@
 1. 搜 `{城市} {方向} 招聘` → 有明细页就直接收
 2. 只有聚合页 → 页内每条岗位单独再搜一次 `{公司名} {岗位名} 招聘`，命中明细页即收
 3. 命中转载站（形态 C）→ 收，并标注来源
-4. 三档都不成 → **允许入库，但 `招聘链接` 留空**，`备注` 写 `线索待补 · 来源:聚合页`（去重会自动退化为「公司+岗位」键，不会重复入库）
+4. 明细页补搜 ≤2 轮仍拿不到 → **`招聘链接` 不许留空**，填「定位链接」：该岗位所在平台上的**搜索页/公司职位列表页** URL，`备注` 必须写明 `定位链接（<平台>搜索页）：明细页未获取，点开为同名岗位搜索结果`（见下节）
 
 宁可留线索，也不要因为拿不到明细页而整轮零产出——线索由人工点开补链。
+
+## 「定位链接」是什么（2026-09-24 定）
+
+`招聘链接` 字段**永远不为空**，但链接分两种档次，靠 `备注` 区分：
+
+| 档次 | 链接内容 | 备注写法 |
+|---|---|---|
+| **明细页**（首选） | 见上方 URL 硬规则，`check_link` 判定为 `detail` | 正常备注；转载站注明来源 |
+| **定位链接**（兜底） | 平台搜索页（如 `zhipin.com/web/geek/job?query=<岗位名>&city=<城市码>`、`liepin.com/zhaopin/?key=<岗位名>`、`zhaopin.com/sou/...`、公司职位列表页） | `定位链接（<平台>搜索页）：明细页未获取，点开为同名岗位搜索结果` |
+
+规则：① 先按降级链尽力补明细页；② 补不到才降级为定位链接，**不得**把搜索页当明细页写而不加备注；③ `check_link` 判为 `search` 的候选**不得直接入库**，必须走完降级链。
+
+## 存量链接体检（维护动作）
+
+老记录里常混着「搜索态」链接和带跟踪参数的长 URL，肉眼看不出来。定期（或用户反馈"链接点开不对"时）跑一遍体检：
+
+```bash
+# 1) 拉全表
+lark-cli base +record-list --base-token $BASE --table-id $TBL --page-size 200 --format ndjson --output check.ndjson --as user
+# 2) 逐条判定（§见 dedup_keys.py 的 check_link）
+python3 - <<'EOF'
+import json, re, sys
+sys.path.insert(0, '/Users/hugo/.workbuddy/skills/daily-job-push/scripts')
+from dedup_keys import check_link
+for r in map(json.loads, open('check.ndjson')):
+    f = r.get('fields', r); raw = str(f.get('招聘链接',''))
+    m = re.search(r'\((https?://[^)]+)\)', raw); url = m.group(1) if m else raw
+    if check_link(url) != 'detail':
+        print(r['record_id'], '|', f.get('岗位名称'), '|', check_link(url), '|', url[:90])
+EOF
+```
+
+非 `detail` 的逐条处理：能补明细页就补（按上面的降级链）；补不到就改成定位链接 + 备注；带 `utm_*`/`pgRef`/`d_sfrom` 等跟踪参数的，**清洗成干净 URL**。
 
 ## 实测样本（2026-09 深圳 AI 方向，可作回归测试）
 
