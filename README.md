@@ -29,9 +29,19 @@
 
 ## 安装
 
-**WorkBuddy**：把 `daily-job-push` 目录放到 `~/.workbuddy/skills/` 下。
+**从 GitHub 安装（推荐）**：仓库公开在 <https://github.com/zhonghugo/daily-job-push>
+
+```bash
+git clone https://github.com/zhonghugo/daily-job-push ~/.workbuddy/skills/daily-job-push
+```
+
+不想用 git 也可以在 GitHub 页面点 **Code → Download ZIP**，解压后把 `daily-job-push` 整个目录放进 `~/.workbuddy/skills/`（确认 `SKILL.md` 位于该目录顶层）。
+
+**WorkBuddy 本地安装**：把 `daily-job-push` 目录放到 `~/.workbuddy/skills/` 下，重启会话即生效。
 
 **其他 Agent**（Claude Code / OpenClaw 等）：放到该 Agent 的 skills 目录，或使用平台提供的安装口令。
+
+装好后验证：对 AI 说「列出我可用的技能」，看到 `daily-job-push` 即安装成功。
 
 ## 使用
 
