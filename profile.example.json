@@ -5,6 +5,7 @@
   "salary_min": null,
   "salary_max": null,
   "resume_path": "",
+  "allow_login_fetch": false,
   "exclude_keywords": [],
   "seniority": "",
   "industries": [],
