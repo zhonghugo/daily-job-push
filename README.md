@@ -43,6 +43,14 @@ git clone https://github.com/zhonghugo/daily-job-push ~/.workbuddy/skills/daily-
 
 装好后验证：对 AI 说「列出我可用的技能」，看到 `daily-job-push` 即安装成功。
 
+### 分享给别人（最省事的方式）
+
+直接把仓库链接发给对方，并让对方**照抄这句话**发给自己的 AI（说清楚了安装位置，成功率最高）：
+
+> 帮我安装一个技能：把 https://github.com/zhonghugo/daily-job-push 克隆到 ~/.workbuddy/skills/daily-job-push/，装好后验证 SKILL.md 存在并列出这个技能是干什么的。
+
+> 💡 WorkBuddy 官方「一句话安装」目前只支持技能市场（BuiltinMarket）里的技能；从 GitHub 链接安装走的是 AI 自主执行（git clone），说清楚目标目录能避免装错位置。
+
 ## 使用
 
 第一次说一句：
