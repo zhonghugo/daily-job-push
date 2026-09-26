@@ -21,15 +21,15 @@ import pathlib
 
 FIELDS = ["岗位名称", "公司名称", "招聘链接", "薪资范围", "工作地点",
           "来源平台", "状态", "匹配理由", "岗位要点", "备注",
-          "发布日期", "投递反馈"]
+          "发布日期", "渠道数", "同岗来源", "投递反馈"]
 
 MD_COLS = ["岗位名称", "公司名称", "薪资范围", "工作地点", "来源平台",
-           "状态", "匹配理由", "岗位要点", "备注"]
+           "状态", "渠道数", "匹配理由", "岗位要点", "备注"]
 
 
-def cell(s: str) -> str:
-    """Markdown 表格单元格转义"""
-    return (s or "").replace("|", "\\|").replace("\n", " ").strip()
+def cell(s) -> str:
+    """Markdown 表格单元格转义（渠道数是数字，统一转字符串）"""
+    return str(s if s is not None else "").replace("|", "\\|").replace("\n", " ").strip()
 
 
 def main():
@@ -42,7 +42,7 @@ def main():
     jobs = json.load(open(a.jobs, encoding="utf-8"))
     rows = []
     for j in jobs:
-        r = {k: (j.get(k) or "") for k in FIELDS}
+        r = {k: ("" if j.get(k) is None else j.get(k)) for k in FIELDS}
         r["状态"] = r["状态"] or "待投递"
         r["发布日期"] = r["发布日期"] or a.date
         rows.append(r)
