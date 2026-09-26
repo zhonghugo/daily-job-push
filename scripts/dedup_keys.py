@@ -24,11 +24,20 @@ candidates.json  : [{"岗位名称":"..","公司名称":"..","招聘链接":".."
         下轮拼 existing.ndjson 时排在 jobs-*.ndjson 之后，归并后的版本天然胜出
 
 另有一份 stdout 报告：
-  · 每轮归并明细 + 四类标记（键冲突 / 同链接重复 / 同链接但岗位名不同 / 同名待确认）
+  · 每轮归并明细 + 五类标记（键冲突 / 同名不同限定 / 同链接重复 / 同链接但岗位名不同 / 同名待确认）
   · **存量体检**：只读列出「同一去重键挂着多条记录」的清单，不改任何记录、不产生写回体。
     老脚本没脱 markdown 链接壳，链接去重对存量记录从未生效，表里攒下了重复行——
-    归并只在候选碰到这些键时才改得动一条，候选碰不到就永远没人知道，故每轮全量扫一遍。
-    清理由人做，技能不得自动删行。
+    候选碰不到这些键就永远没人知道，故每轮全量扫一遍。清理由人做，技能不得自动删行。
+
+⚠️ **候选命中多行时，本轮不改、只报**（stdout 的「键冲突（本轮未归并）」）：
+   要么存量里本来就有重复行，要么候选自己不带限定词、看不出该落在哪一条
+   （「AI产品经理」在传音有 J19661 / HR领域 / 数据运营方向 三个岗）。两种都只有人能定，
+   猜测着并进其中一条 = 把来源行挂到错的岗位上，所以宁可这一轮不写。
+
+⚠️ **T 键会用括号限定词筛行**：`norm_text` 去括号内容是为了跨平台兜底（同一岗位一边带
+   req id 一边不带），代价是同公司同名不同岗共用一个键。故 T 键命中的行要先过
+   `title_conflicts` ——「(J19661)」与「（HR领域）」两边都有限定词且无交集 → 不是同一岗位，
+   既不算命中也不算冲突；候选因此按新岗位入库并在报告里点名（❓同名不同限定）。
 
 ⚠️ **渠道数 = 去重后的平台数**（不是来源行数）。同一平台重复见到（列表页 + 明细页，
    或隔几天又搜到）会长出第二行来源，但那不构成「跨渠道在招」的证据——按行数计会伪造信号
@@ -98,6 +107,42 @@ def norm_text(s: str) -> str:
     s = re.sub(r"(有限公司|股份有限公司|科技公司|公司)$", "", s)
     s = re.sub(r"[\s\-_/·、,，.。·]+", "", s)
     return s
+
+def paren_tokens(s) -> set:
+    """岗位名里的括号限定词，如 (J19661) / （HR领域）。
+
+    T 键故意去括号内容，是为了跨平台兜底——同一岗位一边带 req id、一边不带。
+    代价是同公司同名不同岗会共用一个 T 键，靠这里把它们区分开。
+    """
+    return {norm_text(t) for t in re.findall(r"[（(【\[](.*?)[)）】\]]", str(s or ""))
+            if norm_text(t)}
+
+def title_conflicts(a, b) -> bool:
+    """两个岗位名的基础名相同（T 键已保证）时，括号限定词是否互相排斥。
+
+    两边都有限定词且**毫无交集** → 两个不同岗位（J19661 vs HR领域 vs 数据运营方向）；
+    任一边没有限定词、或限定词有交集 → 可能是同一岗位。只在这一种情形下判"不同"，
+    所以永不把两个岗位静默合成一条：拿不准就留给键冲突，报给人看。
+    """
+    ta, tb = paren_tokens(a), paren_tokens(b)
+    return bool(ta and tb and not (ta & tb))
+
+def title_uncertain(a, b) -> bool:
+    """T 键命中、却看不出是不是同一个岗位：限定词毫无交集且至少一边有。
+
+    「一边带 req id、一边不带」的同一岗位长这样，两个不同岗位（裸标题候选撞上
+    「（HR领域）」行）也长这样——判断不了，所以照并但报 ❓同名待确认，让人扫一眼。
+    两边限定词一致（或都没有）时不算不确定，别拿误报淹掉真报警。
+    """
+    ta, tb = paren_tokens(a), paren_tokens(b)
+    return bool((ta | tb) and not (ta & tb))
+
+def idx_add(m: dict, keys, i: int):
+    """把下标挂到多个键上（一个键可挂多行，同 ① 的 key2rec）"""
+    for k in keys:
+        lst = m.setdefault(k, [])
+        if i not in lst:
+            lst.append(i)
 
 def keys_of(job: dict):
     """返回该岗位的全部去重键（命中任一即视为同一个岗位）"""
@@ -238,14 +283,17 @@ def audit_existing(key2rec):
     """存量体检：同一个去重键下挂着多条**带 record_id** 的记录。
 
     老脚本没脱 markdown 壳，链接去重对存量记录从未生效（只剩「公司+岗位」兜底），
-    表里因此攒下了重复行。归并只在候选碰到这些键时才改得动一条，候选碰不到就永远
-    没人知道——所以在装载时全量体检一次。只读，不产生任何写回体。
+    表里因此攒下了重复行。一个去重键下挂着多行时，命中该键的候选整条都不归并（本轮
+    只报），所以脏行会一直挡住跨渠道信号；候选碰不到这些键就更没人知道了——故装载时
+    全量体检一次。只读，不产生任何写回体。
 
     分两档，因为处置方式不同：
       · 同链接（L 键）——同一条 URL 挂在多行上。**再按岗位名分**：
           岗位名相同 → 多半是重复行（历次重跑把公司名写飘了），可直接合并；
           岗位名不同 → 链接可能配错了（一行挂着别家的岗位），必须核对
-      · 同名待查（T 键）——公司+岗位名同但链接不同，**可能是两个岗位**，得看一眼
+      · 同名待查（T 键）——公司+岗位名同但链接不同，**可能是两个岗位**，得看一眼；
+          组内两两括号限定词互斥的（J19661 / HR领域 / 数据运营方向）只是共用宽键的
+          不同岗位，不是重复，不报
 
     返回 (同链接, 同名待查)，元素为 (键, [(记录, 岗位名是否一致)…])。
     """
@@ -260,7 +308,10 @@ def audit_existing(key2rec):
                             for e in rows}) == 1
                 by_link.append((k, rows, same))
             else:
-                by_title.append((k, rows))
+                titles = [one(e["fields"].get("岗位名称")) for e in rows]
+                if not all(title_conflicts(titles[i], titles[j])
+                           for i in range(len(titles)) for j in range(i + 1, len(titles))):
+                    by_title.append((k, rows))
     return by_link, by_title
 
 def main():
@@ -287,10 +338,11 @@ def main():
     cands = json.load(open(a.candidates, encoding="utf-8"))
 
     kept, leads, bad = [], [], []
-    key2kept = {}          # 去重键 -> kept 下标（同批内归并，不重复入库）
+    key2kept = {}          # 去重键 -> [kept 下标]（同批内归并；一个键可能挂多条不同岗位）
     merges, pending = [], {}   # pending: 已有记录 _id -> 归并条目（同一行被多次归并时累加）
     conflicts = {}         # 存量重复行告警，与归并解耦：候选只是重复确认时也要报出来
     n_repeat = 0           # 同一来源重复见到（不算新渠道，但证明岗位还在）
+    twins = []             # 同名不同限定：T 键撞上但括号限定词互斥 → 按新岗位入库，报给人看
 
     for j in cands:
         link = (j.get("招聘链接") or "").strip()
@@ -309,13 +361,31 @@ def main():
             continue
 
         # ① 命中已有记录 → 归并（老岗位又出现在新渠道，不再丢弃）
-        hits = {k: key2rec[k] for k in jk if k in key2rec}
+        # T 键去括号内容是为了跨平台兜底（同一岗位一边带 req id 一边不带），代价是
+        # 同公司同名不同岗会共用一个键。逐行比括号限定词，把明确不是同一岗位的行剔掉，
+        # 它们既不参与归并、也不算进「键冲突」——否则传音那 3 个岗位中任何一个候选
+        # 都会命中 3 行，整条候选都落不了库（命中多行 = 本轮只报不并）。
+        cand_title = one(j.get("岗位名称"))
+        hits, dropped = {}, []
+        for k in (k for k in jk if k in key2rec):
+            if k.startswith("L:"):      # 同一 URL 即同一岗位，不筛（链接挂错由存量体检报）
+                hits[k] = key2rec[k]
+                continue
+            keep = [e for e in key2rec[k]
+                    if not title_conflicts(cand_title, one(e["fields"].get("岗位名称")))]
+            keep_ids = {e["_id"] for e in keep}
+            dropped += [one(e["fields"].get("岗位名称")) for e in key2rec[k]
+                        if e["_id"] not in keep_ids]
+            if keep:
+                hits[k] = keep
         if hits:
             # 同一个键可能有多行：取最后读到的（本地模式的更正日志靠这个生效）
             win = hits[sorted(hits)[0]][-1]
             eid = win["_id"]
-            # 一条岗位同时命中多条**带 record_id** 的已有记录 = 存量里本来就有重复行
-            # （老脚本链接键失效留下的），归并只改得动其中一条，必须报出来人工处理。
+            # 一条岗位同时命中多条**带 record_id** 的已有记录：要么存量里本来就有重复行
+            # （老脚本链接键失效留下的），要么候选本身不含限定词、无法判断落在哪一条
+            # （"AI产品经理" 在传音有 J19661 / HR领域 / 数据运营方向 三个岗）。两种都
+            # 只有人能定，**本轮就不动**——不猜、不合并、不产生写回体，只报出来。
             # 只认带 record_id 的：本地模式下同一个键出现多行是 merges-*.ndjson
             # 更正日志的正常形态（同一岗位的新旧版本），不是重复
             span = {e["_id"]: e for lst in hits.values() for e in lst if e["record_id"]}
@@ -323,9 +393,11 @@ def main():
                 # 带上每行的岗位名：命中的未必都是重复——退化键会去括号内容，
                 # "AI产品经理(J19661)" 与 "AI产品经理（HR领域）" 同键却是两个岗位，
                 # 不带名字用户没法判断该合哪几条
-                conflicts[eid] = {
-                    "岗位名称": one(win["fields"].get("岗位名称")) or "?",
-                    "公司名称": one(win["fields"].get("公司名称")),
+                c = conflicts.setdefault(eid, {
+                    # 报的是**候选**（裸标题那个），不是它差点并进去的那一行：
+                    # 用户要判断的是"这条新线索该算哪个岗位"，命中的行在下面逐条列
+                    "岗位名称": cand_title or "?",
+                    "公司名称": one(j.get("公司名称")),
                     "命中记录": [
                         {
                             "_id": k,
@@ -334,12 +406,18 @@ def main():
                         }
                         for k, e in sorted(span.items())
                     ],
-                }
+                    "候选": [],
+                })
+                # 本轮不归并，候选自己的来源行就没地方写了（既非新岗位也非归并）：
+                # 至少打印出来，别让这条线索无声消失
+                c["候选"].append(f"{cand_title or '?'} —— {source_line(j, today)}")
+                continue
             # 候选自带链接、却只靠「公司+岗位」键命中 = 同名不同链接，可能同名不同岗
             # （T 键会去括号内容，"AI产品经理(J19661)" 与 "AI产品经理（HR领域）" 同键），
             # 照并但标注，让人看一眼决定拆不拆
             ambiguous = bool(norm_link(j.get("招聘链接") or "")) and not any(
-                k.startswith("L:") for k in hits)
+                k.startswith("L:") for k in hits) and title_uncertain(
+                    cand_title, one(win["fields"].get("岗位名称")))
             m = pending.get(eid)
             if m is None:
                 m = pending[eid] = {
@@ -350,14 +428,12 @@ def main():
                     "record_id": win["record_id"],
                     "岗位名称": one(win["fields"].get("岗位名称")) or "?",
                     "公司名称": one(win["fields"].get("公司名称")),
-                    "键冲突": len(span) > 1,
                     "同名待确认": ambiguous,
                 }
                 m["原渠道数"] = channels_of(m["_lines"])
                 m["原行数"] = len(m["_lines"])
                 merges.append(m)
             m["_hit"] |= set(hits)
-            m["键冲突"] = m["键冲突"] or len(span) > 1
             m["同名待确认"] = m["同名待确认"] or ambiguous
             lines, state = merge_source(m["_lines"], j, today)
             if state == "repeat":
@@ -366,10 +442,23 @@ def main():
             m["_lines"] = lines
             continue
 
-        # ② 命中本批已收的岗位 → 同批归并
-        same = next((k for k in jk if k in key2kept), None)
+        if dropped:
+            twins.append((cand_title, one(j.get("公司名称")),
+                          sorted({t for t in dropped if t})))
+
+        # ② 命中本批已收的岗位 → 同批归并（同批内 T 键同样会串键，只认标题兼容的）
+        same = None
+        for k in jk:
+            for i in reversed(key2kept.get(k, [])):
+                if k.startswith("T:") and title_conflicts(
+                        cand_title, one(kept[i].get("岗位名称"))):
+                    continue
+                same = i
+                break
+            if same is not None:
+                break
         if same is not None:
-            i = key2kept[same]
+            i = same
             lines = parse_sources(kept[i].get("同岗来源"))
             before, before_ch = len(lines), channels_of(lines)
             lines, state = merge_source(lines, j, today)
@@ -382,16 +471,14 @@ def main():
             kept[i]["备注"] = (str(kept[i].get("备注", "")) +
                                f" · 同批另有来源（渠道 {before_ch}→{after_ch}"
                                f" · 来源 {before}→{len(lines)} 条）").strip(" ·")
-            for k in keys_of(kept[i]):
-                key2kept[k] = i
+            idx_add(key2kept, keys_of(kept[i]), i)
             continue
 
         # ③ 真正的新岗位
         lines = [source_line(j, today)]
         j = dict(j, 渠道数=1, 同岗来源="\n".join(lines))
         kept.append(j)
-        for k in jk:
-            key2kept[k] = len(kept) - 1
+        idx_add(key2kept, jk, len(kept) - 1)
 
     for m in merges:                       # 收尾：算出最终要写回的字段
         lines, fields = m.pop("_lines"), m.pop("_fields")
@@ -414,7 +501,7 @@ def main():
             os.remove(stale)
     if merges:
         json.dump(merges, open(merge_out, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-        api = [m for m in merges if m["record_id"] and not m["键冲突"]]
+        api = [m for m in merges if m["record_id"]]
         if api:
             upd_path = stem + ".updates.json"
             json.dump({"update_records": {m["record_id"]: m["更新字段"] for m in api}},
@@ -439,7 +526,12 @@ def main():
         print(f"  ── 存量体检（只读，不改记录）：{len(by_link)} 组同链接、"
               f"{len(by_title)} 组同名待查，需人工清理 ──")
         for k, rows, same_title in by_link:
-            if same_title:
+            sts = sorted({one(e["fields"].get("状态")) or "?" for e in rows})
+            if same_title and len(sts) > 1:
+                # 同一条 URL 两行、岗位名一致，但状态是人工流转出来的两份：先定保留谁
+                print(f"  ⚠️ 同链接重复但状态不同 {k[2:]}（{len(rows)} 行，岗位名一致，"
+                      f"状态 {' / '.join(sts)} → 定下保留哪一份再合并）：")
+            elif same_title:
                 print(f"  ⚠️ 同链接重复 {k[2:]}（同一条 URL 挂在 {len(rows)} 行上，"
                       f"岗位名一致 → 多半是重复行，可直接合并）：")
             else:
@@ -456,29 +548,33 @@ def main():
         print("      → 岗位名一致的同链接行可直接合并；岗位名不同或链接不同的先核对——"
               "退化键会去括号内容，「X(J19661)」与「X（HR领域）」同键却是两个岗位")
     for m in merges:
-        flag = "  ⚠️ 键冲突，需人工合并重复行" if m["键冲突"] else ""
-        if m["同名待确认"]:
-            flag += "  ❓同名待确认（仅公司+岗位名相同、链接不同，可能同名不同岗）"
+        flag = "  ❓同名待确认（仅公司+岗位名相同、链接不同，可能同名不同岗）" if m["同名待确认"] else ""
         # 行数与渠道数不等 = 同一平台又见到（不算跨渠道），把来源数一并打出来免得误读成漏记
         rows = (f" · 来源 {m['原行数']}→{m['来源行数']} 条"
                 if m["来源行数"] != m["新渠道数"] else "")
         print(f"  归并: {m['岗位名称']} @{m['公司名称']} "
               f"渠道 {m['原渠道数']}→{m['新渠道数']}{rows}{flag}")
     for c in conflicts.values():
-        # 存量重复行：本轮归并改不动（甚至根本没触发归并），只能人工处理
-        print(f"  ⚠️ 键冲突: {c['岗位名称']} @{c['公司名称']} 同时命中 "
-              f"{len(c['命中记录'])} 条已有记录，归并只改得动一条：")
+        # 命中多行、无法自动判断落在哪一条：本轮未归并、未产生写回体，只能人工处理
+        print(f"  ⚠️ 键冲突（本轮未归并）: {c['岗位名称']} @{c['公司名称']} 同时命中 "
+              f"{len(c['命中记录'])} 条已有记录：")
         for r in c["命中记录"]:
             print(f"      {r['_id']}  {r['岗位名称']} @{r['公司名称']}")
-        print("      → 请人工判断：这几条不一定都是重复（退化键会去括号内容，"
-              "「X(J19661)」与「X（HR领域）」同键却是两个岗位）")
+        for ln in c["候选"]:
+            print(f"      ← 本轮候选（未归并）: {ln}")
+        print("      → 请人工判断：这几条未必都是重复——退化键会去括号内容，"
+              "「X(J19661)」与「X（HR领域）」同键却是两个岗位；"
+              "确系重复的合并后，下一轮才会归并进去")
+    for title, com, others in twins:
+        print(f"  ❓同名不同限定: {title} @{com} —— 已有「{'、'.join(others)}」"
+              f"同公司同基础岗位名但括号限定词互斥，按新岗位入库；若确为同岗请人工合并")
     for p in leads[:5]:
         print("  线索:", p)
     for p, r in bad[:8]:
         print("  丢弃:", p, "->", (r or "")[:70])
     print("已写出:", a.out, ("｜" + merge_out) if merges else "")
     if upd_path:
-        print("飞书写回体:", upd_path, f"（{len(merges) - sum(1 for m in merges if m['键冲突'] or not m['record_id'])} 条）")
+        print("飞书写回体:", upd_path, f"（{len(api)} 条）")
     if local_path:
         print("本地归并日志:", local_path, "（下轮拼进 existing.ndjson，排在 jobs-* 之后）")
 
