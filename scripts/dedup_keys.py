@@ -39,6 +39,12 @@ candidates.json  : [{"岗位名称":"..","公司名称":"..","招聘链接":".."
    `title_conflicts` ——「(J19661)」与「（HR领域）」两边都有限定词且无交集 → 不是同一岗位，
    既不算命中也不算冲突；候选因此按新岗位入库并在报告里点名（❓同名不同限定）。
 
+⚠️ **L 键按 query 区分岗位**：`norm_link` 只丢追踪类参数（`TRACKING_PARAMS` / `utm_` 前缀），
+   其余 query 按参数名排序后保留。老版丢掉整个 query，把岗位 id 放在参数里的站点会整站塌成
+   一个键（腾讯 `jobdesc.html?postId=…`）——存量重复行清干净后，换个岗位也会被判成
+   「同一条又见到」：轻则算进「重复确认」、整条候选无声消失，重则并进上一条伪造出跨渠道信号。
+   取舍：拿不准就保留——多余的追踪参数只多一条看得见的重复行，T 键还能兜回来；误丢 id 不可回滚。
+
 ⚠️ **渠道数 = 去重后的平台数**（不是来源行数）。同一平台重复见到（列表页 + 明细页，
    或隔几天又搜到）会长出第二行来源，但那不构成「跨渠道在招」的证据——按行数计会伪造信号
    （PRD 实验 1 的核心指标是「几个渠道在招」，渠道指平台）。两个数都留着：渠道数给信号，
@@ -90,8 +96,23 @@ def raw_url(v) -> str:
     m = MD_LINK.search(s)
     return m.group(1) if m else s
 
+# query 里只丢这些追踪/会话参数；名字对不上的一律保留（取舍得失见 norm_link）
+TRACKING_PARAMS = frozenset("""
+    from source src ref refer referer referrer share shared sharesource
+    spm se sc chl channel channelid track tracking trackid trace traceid
+    lid sid tid ru seekerid securityid jsessionid sessionid session phpsessid
+    clickid clicktime _t t ts time _ rand random cache _ga _gl pgref d_sfrom ka
+""".split())
+
 def norm_link(url: str) -> str:
-    """去 query/fragment、去 www、小写 host、去尾斜杠 —— 同页不同参数视为同一条"""
+    """规范化链接得到 L 键：去 fragment、去 www、小写 host、去尾斜杠；
+    query 只丢追踪类参数（TRACKING_PARAMS / utm_ 前缀），其余按参数名排序后原样保留。
+
+    老版把 query 整个丢掉（"同页不同参数视为同一条"），代价是把岗位 id 放在参数里的站点
+    整站塌成一个键——腾讯 hr.tencent.com/m/jobdesc.html?postId=… 就是。存量重复行清干净后，
+    换个岗位也会被判成「同一条又见到」：轻则算进重复确认、候选无声消失，重则并进上一条。
+    反过来，追踪参数没扔干净只是多一条看得见的重复行，T 键还能兜回来。故一律：**拿不准就保留**。
+    """
     if not url:
         return ""
     url = raw_url(url)
@@ -99,7 +120,13 @@ def norm_link(url: str) -> str:
     host = (p.netloc or "").lower()
     host = re.sub(r"^www\.", "", host)
     path = re.sub(r"/+$", "", p.path or "")
-    return f"{host}{path}"
+    q = []
+    for part in (p.query or "").split("&"):
+        name = unquote(part.split("=", 1)[0]).strip().lower()
+        if part and not name.startswith("utm_") and name not in TRACKING_PARAMS:
+            q.append(part)
+    q.sort(key=lambda s: unquote(s.split("=", 1)[0]).strip().lower())
+    return f"{host}{path}" + ("?" + "&".join(q) if q else "")
 
 def norm_text(s: str) -> str:
     s = (s or "").lower()

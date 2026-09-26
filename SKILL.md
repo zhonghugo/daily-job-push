@@ -341,7 +341,7 @@ lark-cli im +messages-send --as user --user-id $OPEN_ID --markdown "$(cat summar
 
 详见 `references/platform-rules.md`。速记：拉勾已关停不搜；鱼泡禁用（蓝领向，浪费配额）；猎聘搜索结果页 URL 不是明细页（易混）；BOSS 直聘反爬狠，搜不到就换前程无忧/智联补量；所有"官网"来源必须人工核验域名。
 
-**改了 `scripts/` 里的脚本 → 先跑回归**：`bash scripts/test_dedup_keys.sh`（49 条断言，覆盖飞书/local 两模式、归并、五类标记、存量体检、同平台不涨渠道数、括号限定词分岗）。不跑就等于拿用户的表当试验场。
+**改了 `scripts/` 里的脚本 → 先跑回归**：`bash scripts/test_dedup_keys.sh`（56 条断言，覆盖飞书/local 两模式、归并、五类标记、存量体检、同平台不涨渠道数、括号限定词分岗、L 键只丢追踪参数）。不跑就等于拿用户的表当试验场。
 
 **跨环境坑**：别的 Agent 里可能没有 `lark-cli`、没有 python3、甚至没有网络自由度。
 - 没有 `lark-cli` → 走 local 模式，别在第 2 步死等（这是最常见的翻车点）

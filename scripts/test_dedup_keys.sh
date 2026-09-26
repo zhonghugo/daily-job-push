@@ -1,5 +1,5 @@
 #!/bin/bash
-# daily-job-push / dedup_keys.py 回归测试（49 条断言，用例 A–K）
+# daily-job-push / dedup_keys.py 回归测试（56 条断言，用例 A–L）
 # 用法: bash scripts/test_dedup_keys.sh     # 任意 cwd 下都能跑，临时目录固定在 /tmp/dedup_regress
 cd "$(dirname "$0")/.." || exit 1
 DEDUP="$PWD/scripts/dedup_keys.py"
@@ -192,6 +192,35 @@ chk "两条各自渠道数=1（未被误并成跨渠道）" "$(python3 -c "
 import json;d=json.load(open('k.json'))
 print(sorted(r['渠道数'] for r in d))")" "[1, 1]"
 chk "同批不产生归并" "$(echo "$out"|grep -c '^  归并:')" "0"
+
+echo "═══ 用例L：L 键只丢追踪参数（岗位 id 在 query 里时不再塌成一个键） ═══"
+cd $D && rm -rf l && mkdir l && cd l
+SD="$(dirname "$DEDUP")"
+chk "追踪参数丢掉、岗位 id 留下（fragment 也丢）" "$(python3 -c "
+import sys; sys.path.insert(0, '$SD')
+import dedup_keys as d
+print(d.norm_link('https://hr.tencent.com/m/jobdesc.html?postId=9&utm_source=a&from=b&_t=1#top'))")" "hr.tencent.com/m/jobdesc.html?postId=9"
+chk "参数顺序无关（按参数名排序）" "$(python3 -c "
+import sys; sys.path.insert(0, '$SD')
+import dedup_keys as d
+print(d.norm_link('https://hr.tencent.com/m/jobdesc.html?dept=ai&postId=9'))")" "hr.tencent.com/m/jobdesc.html?dept=ai&postId=9"
+chk "BOSS 的 lid/securityId/sessionId 这类会话参数也丢" "$(python3 -c "
+import sys; sys.path.insert(0, '$SD')
+import dedup_keys as d
+print(d.norm_link('https://www.zhipin.com/job_detail/abc123.html?lid=1&securityId=2&sessionId=3'))")" "zhipin.com/job_detail/abc123.html"
+cat > ex.ndjson <<'EOF'
+{"record_id":"recTX1","岗位名称":"AI提效运营","公司名称":"腾讯","招聘链接":"[查看岗位](https://hr.tencent.com/m/jobdesc.html?postId=11111111)","来源平台":["腾讯招聘官网"],"状态":["待投递"],"发布日期":"2026-09-20","渠道数":1,"同岗来源":"[2026-09-20] 腾讯招聘官网 · - · 深圳 · https://hr.tencent.com/m/jobdesc.html?postId=11111111"}
+EOF
+cat > c.json <<'EOF'
+[{"岗位名称":"AI运营","公司名称":"腾讯","招聘链接":"https://hr.tencent.com/m/jobdesc.html?postId=22222222","来源平台":["猎聘"],"备注":"run"},
+ {"岗位名称":"AI提效运营","公司名称":"腾讯","招聘链接":"https://hr.tencent.com/m/jobdesc.html?postId=11111111&utm_source=liepin&from=search","来源平台":["猎聘"],"备注":"run"}]
+EOF
+out=$(python3 $DEDUP --existing ex.ndjson --candidates c.json --out l.json --today 2026-09-26)
+chk "不同 postId 是两个岗位（老版整站塌成一个键，会静默并成一条）" "$(python3 -c "
+import json;d=json.load(open('l.json'));print([r['岗位名称'] for r in d])")" "['AI运营']"
+chk "带追踪参数的同一 postId 仍认成同一条（重复确认，不新建行）" "$(echo "$out"|grep -o '重复确认 [0-9]*'|grep -o '[0-9]*')" "1"
+chk "纯重复确认不产生归并计划" "$(echo "$out"|grep -c '^  归并:')" "0"
+chk "纯重复确认不产生写回体（老行不动）" "$([ -f l.updates.json ] && echo yes || echo no)" "no"
 
 echo
 echo "══════ 通过 $pass / 失败 $fail ══════"
