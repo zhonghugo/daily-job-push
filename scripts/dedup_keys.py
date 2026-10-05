@@ -63,7 +63,7 @@ BOT_HOSTS = ("sou.zhipin.com", "we.51job.com", "www.zhaopin.com/sou")
 DETAIL_PATTERNS = {
     "zhipin.com":   r"/job_detail/",
     "liepin.com":   r"/(job|lptjob|a)/\d+",
-    "maimai.cn":    r"/(web/job/|web/feed/detail)",
+    "maimai.cn":    r"/(web/job/|web/feed/detail|article/detail)",
     "51job.com":    r"(job\d+\.html|/\d+\.html|/jobs/[^/]+/\d+\.html)",
     "zhaopin.com":  r"(/cc[a-z]?\d+j\d+\.htm|/job/[a-z0-9]{6,})",
     # —— 公司官网 / 官方招聘系统（域名与明细页形态都要核验，防假冒站）——

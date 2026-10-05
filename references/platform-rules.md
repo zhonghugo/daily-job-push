@@ -10,7 +10,7 @@
 | 猎聘 | liepin.com | 可用。明细页形态：`/job/<数字>.shtml`、`/a/<数字>.shtml`、`/lptjob/<数字>/`（猎头职位）；JD 可抓 |
 | 前程无忧 | 51job.com | 补量主力，结构相对好抓；明细页 `msearch.51job.com/jobs/<城市>/<数字>.html` 也可抓 |
 | 智联招聘 | zhaopin.com | 明细页：`jobs.zhaopin.com/CC<数字>J<数字>.htm`、`m.zhaopin.com/jobs/CCL<数字>J<数字>.htm`；`zhaopin.com/sou/*` 是搜索页。明细页需登录，处置见下方「登录墙与授权登录」 |
-| 脉脉 | maimai.cn | 职位详情常藏在社区流里；搜不到明细页就如实说明该渠道无新增，不硬凑 |
+| 脉脉 | maimai.cn | 招聘帖主流形态 `article/detail?efid=<加密串>&fid=<数字>`（2026-10-05 实测：可检索、免登录可读 JD 全文）；另有 `/web/job/`、`/web/feed/detail?fid=`。⚠️ 同形态含大量科普/行业文章，需按有效性检查甄别；RPA 等主方向关键词公开索引多为行业文、AI 运营类招聘帖命中率高，主方向转品牌页 `brand/home/<id>` 或 API 通道补充（见 references/maimai-api.md）。搜不到明细页就如实说明该渠道无新增，不硬凑 |
 | 公司官网 | 各公司官网 / careers / hr.* | 只收知名公司官网职位详情页，域名与页面形态都要人工核验（假冒招聘站多）。已登记：`hr.tencent.com/m/jobdesc.html`、`hr-new.sf-express.com/SearchJobSearchById/<id>`、`walmartchina.avature.cn/.../JobDetail/<id>` |
 | 全职招聘网 | quanzhi.com | 明细页 `/job/<长id>`、`/job/detail/<id>`；JD 完整可抓，常与智联同源 |
 | 企查查 | qcc.com | 明细页 `m.qcc.com/jobdetail/<32位id>.html`；JD 完整可抓 |
@@ -51,7 +51,7 @@
 
 - BOSS直聘：`zhipin.com/job_detail/<哈希>.html`
 - 猎聘：`liepin.com/job/<数字或哈希>.shtml` 或 `/a/<id>.shtml` —— ⚠️ **陷阱**：`liepin.com/zhaopin*/`、`/hres/`、带 `key=` 搜索参数的都是搜索/列表页，直接丢弃
-- 脉脉：`maimai.cn/web/job/...` 或 `/web/feed/detail?fid=` —— 品牌主页、社区帖、仅含关键词的搜索 URL 一律不算明细页
+- 脉脉：`maimai.cn/article/detail?efid=<加密串>&fid=<数字>`（推荐形态，2026-10-05 实测可公开读 JD）、`/web/job/...` 或 `/web/feed/detail?fid=` —— 品牌主页、社区帖、仅含关键词的搜索 URL 一律不算明细页。⚠️ `article/detail` 与科普/行业文章同形态，收录前必须 WebFetch 验证是真实招聘帖（含岗位职责/任职要求）且在招
 - 前程无忧：`51job.com/<城市代码>/job<数字>.html` 或 `jobs.51job.com/...`
 - 智联：`zhaopin.com/job/PX<数字>.htm`（`sou.zhaopin.com` 是搜索页，丢弃）
 - 通用判据：URL 路径含唯一 job id；带 `query=`/`key=`/`searchWord=`/`/so/`/`/list/` 的一律是搜索或列表页

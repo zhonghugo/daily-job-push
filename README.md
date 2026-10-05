@@ -95,7 +95,8 @@ daily-job-push/
 │  ├─ onboarding.md             首次使用引导 + 建表命令
 │  ├─ profile-template.md       画像字段说明与填写指引
 │  ├─ table-schema.md           岗位表 12 个字段规范
-│  └─ platform-rules.md         平台白名单、URL 判定、降级链
+│  ├─ platform-rules.md         平台白名单、URL 判定、降级链
+│  └─ maimai-api.md             脉脉可选 API 通道（job_search 端点、ejid、详情页构造、合规红线）
 └─ scripts/
    ├─ build_keywords.py         画像 → 搜索关键词
    ├─ dedup_keys.py             去重 + 明细页判定
