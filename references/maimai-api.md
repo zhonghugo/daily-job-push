@@ -20,8 +20,17 @@
 
 ## 前置条件与合规红线
 
-- 需要 `access_token` + 设备参数：一次抓包（Reqable / Charles / mitmproxy）从已登录脉脉 App 获取，或用 maimai-cli 的 `mm login` 短信登录自动签发
-- token 会过期，过期需更新；凭证缺失时回退常规搜索并如实说明
+- 需要 `access_token` + `u`(uid) + 设备参数。**已打通方式（2026-10-12 实测）：maimai-cli `mm login` 短信登录**，无需抓包：
+  ```bash
+  git clone https://github.com/1013503897/maimai-cli.git && cd maimai-cli && pip install -e .
+  cp session.example.json session.local.json   # 设备字段填随机 UUID（各字段不同值，别全填一样的）
+  mm login --phone <手机号> --send            # 发验证码，输出 login-token
+  mm login --phone <手机号> --code <短信码> --login-token <上一步token>
+  ```
+  - 登录成功响应里 extractor 常提不出 uid → **从响应 JSON 的 `info.global_content` 缓存 key 前缀取数字串（如 `35494474_xxx`）填进 session 的 `u`/`uid`**，否则 API 报「登录用户不存在」(20001)
+  - 验证：`mm jobs "RPA" --count 5` 能出职位即通（实测 RPA/AI运营 均有结果）
+  - session.local.json 路径即凭证位置；`mm jobs "<词>" --count N [--page P] [--json]`
+- token 会过期，过期重跑 `mm login`；凭证缺失时回退常规搜索并如实说明
 - **低频调用、遵守脉脉服务条款**；本 skill 不做自动投递（投递动作由用户执行）
 
 ## 收录规则
