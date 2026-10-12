@@ -35,7 +35,8 @@
 
 ## 收录规则
 
-- 明细页链接优先采用 `article/detail?efid=` 形态；拿不到明细页链接的岗位不收录
+- App API 通道（`mm jobs`）：明细链接直接用响应里的 `share_url`（形态 `https://maimai.cn/job?ejid=<ejid>&srcu=...`，官方分享链接）；**不要自己拼 `article/detail?efid=`**——ejid ≠ efid，硬拼是死链
+- Web 搜索通道：明细页链接优先采用 `article/detail?efid=` 形态；拿不到明细页链接的岗位不收录
 - 收录前按 platform-rules.md 执行岗位有效性检查（已下线/停招不收录）
 
 ## WAF 风控（2026-10-12 实测定位）
