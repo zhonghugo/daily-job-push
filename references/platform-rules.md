@@ -10,7 +10,7 @@
 | 猎聘 | liepin.com | 可用。明细页形态：`/job/<数字>.shtml`、`/a/<数字>.shtml`、`/lptjob/<数字>/`（猎头职位）；JD 可抓 |
 | 前程无忧 | 51job.com | 补量主力，结构相对好抓；明细页 `msearch.51job.com/jobs/<城市>/<数字>.html` 也可抓 |
 | 智联招聘 | zhaopin.com | 明细页：`jobs.zhaopin.com/CC<数字>J<数字>.htm`、`m.zhaopin.com/jobs/CCL<数字>J<数字>.htm`；`zhaopin.com/sou/*` 是搜索页。明细页需登录，处置见下方「登录墙与授权登录」 |
-| 脉脉 | maimai.cn | 招聘帖主流形态 `article/detail?efid=<加密串>&fid=<数字>`（2026-10-05 实测可检索、WebFetch 读 JD；2026-10-12 定位：418 WAF 拦的是无浏览器 UA/高频访问，系统 Chrome/Edge 打开正常）；另有 `/web/job/`、`/web/feed/detail?fid=`。⚠️ 同形态含大量科普/行业文章，需按有效性检查甄别；RPA 等主方向关键词公开索引多为行业文、AI 运营类招聘帖命中率高，主方向转品牌页 `brand/home/<id>` 或 API 通道补充（见 references/maimai-api.md）。搜不到明细页就如实说明该渠道无新增，不硬凑 |
+| 脉脉 | maimai.cn | 招聘帖主流形态 `article/detail?efid=<加密串>&fid=<数字>`（2026-10-05 实测可检索、WebFetch 读 JD；2026-10-12 用户实测系统浏览器可正常打开）；另有 `/web/job/`、`/web/feed/detail?fid=`。⚠️ 同形态含大量科普/行业文章，需按有效性检查甄别；RPA 等主方向关键词公开索引多为行业文、AI 运营类招聘帖命中率高。⚠️ **品牌主页 `brand/home/<id>` 已不可公开访问**（2026-10-12 实测带浏览器 UA 也返回 418），不要作为收录或补充入口，主方向补量走 API 通道（见 references/maimai-api.md）。搜不到明细页就如实说明该渠道无新增，不硬凑 |
 | 公司官网 | 各公司官网 / careers / hr.* | 只收知名公司官网职位详情页，域名与页面形态都要人工核验（假冒招聘站多）。已登记：`hr.tencent.com/m/jobdesc.html`、`hr-new.sf-express.com/SearchJobSearchById/<id>`、`walmartchina.avature.cn/.../JobDetail/<id>` |
 | 全职招聘网 | quanzhi.com | 明细页 `/job/<长id>`、`/job/detail/<id>`；JD 完整可抓，常与智联同源 |
 | 企查查 | qcc.com | 明细页 `m.qcc.com/jobdetail/<32位id>.html`；JD 完整可抓 |
