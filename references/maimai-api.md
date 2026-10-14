@@ -27,7 +27,7 @@
   mm login --phone <手机号> --send            # 发验证码，输出 login-token
   mm login --phone <手机号> --code <短信码> --login-token <上一步token>
   ```
-  - 登录成功响应里 extractor 常提不出 uid → **从响应 JSON 的 `info.global_content` 缓存 key 前缀取数字串（如 `35494474_xxx`）填进 session 的 `u`/`uid`**，否则 API 报「登录用户不存在」(20001)
+  - 登录成功响应里 extractor 常提不出 uid → **从响应 JSON 的 `info.global_content` 缓存 key 前缀取数字串（形如 `12345678_xxx`）填进 session 的 `u`/`uid`**，否则 API 报「登录用户不存在」(20001)
   - 验证：`mm jobs "RPA" --count 5` 能出职位即通（实测 RPA/AI运营 均有结果）
   - session.local.json 路径即凭证位置；`mm jobs "<词>" --count N [--page P] [--json]`
 - token 会过期，过期重跑 `mm login`；凭证缺失时回退常规搜索并如实说明

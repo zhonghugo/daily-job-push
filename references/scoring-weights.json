@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "_comment": "岗位评分权重配置。改这里的数字即可调整模型，无需动代码。用户级覆盖：~/.workbuddy/daily-job-push/scoring-weights.json（有则覆盖本默认值）。八项权重之和必须等于 1.0。",
+  "dimensions": {
+    "skills_match": {
+      "weight": 0.18,
+      "label": "技能匹配",
+      "what": "JD 要求的技能栈 vs 画像/简历里的实际技能"
+    },
+    "domain_match": {
+      "weight": 0.18,
+      "label": "领域经验匹配",
+      "what": "业务领域与职能性质能否直接复用（不看职位标题字面，看实际做什么）"
+    },
+    "direction_fit": {
+      "weight": 0.15,
+      "label": "方向对齐",
+      "what": "岗位是否真在画像主攻方向上，还是挂羊头卖狗肉"
+    },
+    "salary": {
+      "weight": 0.15,
+      "label": "薪资竞争力",
+      "what": "区间下限是否达到期望底线，上限是否有空间"
+    },
+    "company": {
+      "weight": 0.12,
+      "label": "公司平台",
+      "what": "规模、赛道、发展阶段、口碑"
+    },
+    "experience_fit": {
+      "weight": 0.10,
+      "label": "年限适配",
+      "what": "JD 年限要求 vs 实际年限——既不要求过高够不着，也不严重低配"
+    },
+    "application_feasibility": {
+      "weight": 0.07,
+      "label": "投递可行性",
+      "what": "链接有效、HR 近期活跃、是否急招"
+    },
+    "risk_reverse": {
+      "weight": 0.05,
+      "label": "反向风险",
+      "what": "年龄/文化暗示风险、外包驻场、加班暗示、外派异地等减分项"
+    }
+  },
+  "bands": {
+    "strong": 80,
+    "good": 65,
+    "watch": 50,
+    "_comment_bands": "综合分档位：>=strong 重点投(🔥)；>=good 可投；>=watch 观望；<watch 不投"
+  },
+  "timing": {
+    "urgent_days": 7,
+    "stale_days": 30,
+    "followup_days": 10,
+    "stale_application_days": 60,
+    "_comment_timing": "urgent_days=投递截止剩余天数阈值；stale_days=发布超过多少天打陈旧标记；followup_days=投递后无回复几天要跟进；stale_application_days=静默多少天批量了结"
+  }
+}

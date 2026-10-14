@@ -11,7 +11,7 @@
 | 前程无忧 | 51job.com | 补量主力，结构相对好抓；明细页 `msearch.51job.com/jobs/<城市>/<数字>.html` 也可抓 |
 | 智联招聘 | zhaopin.com | 明细页：`jobs.zhaopin.com/CC<数字>J<数字>.htm`、`m.zhaopin.com/jobs/CCL<数字>J<数字>.htm`；`zhaopin.com/sou/*` 是搜索页。明细页需登录，处置见下方「登录墙与授权登录」 |
 | 脉脉 | maimai.cn | 招聘帖主流形态 `article/detail?efid=<加密串>&fid=<数字>`（2026-10-05 实测可检索、WebFetch 读 JD；2026-10-12 用户实测系统浏览器可正常打开）；另有 `/web/job/`、`/web/feed/detail?fid=`。⚠️ 同形态含大量科普/行业文章，需按有效性检查甄别；RPA 等主方向关键词公开索引多为行业文、AI 运营类招聘帖命中率高。⚠️ **品牌主页 `brand/home/<id>` 已不可公开访问**（2026-10-12 实测带浏览器 UA 也返回 418），不要作为收录或补充入口，主方向补量走 API 通道（见 references/maimai-api.md）。搜不到明细页就如实说明该渠道无新增，不硬凑 |
-| 公司官网 | 各公司官网 / careers / hr.* | 只收知名公司官网职位详情页，域名与页面形态都要人工核验（假冒招聘站多）。已登记：`hr.tencent.com/m/jobdesc.html`、`hr-new.sf-express.com/SearchJobSearchById/<id>`、`walmartchina.avature.cn/.../JobDetail/<id>` |
+| 公司官网 | 各公司官网 / careers / hr.* | 只收知名公司官网职位详情页，域名与页面形态都要人工核验（假冒招聘站多）。已登记：`hr.tencent.com/m/jobdesc.html`、`hr-new.sf-express.com/SearchJobSearchById/<id>`、`walmartchina.avature.cn/.../JobDetail/<id>`、`talent.pingan.com/recruit/position.html?positionId=<32位hex>`（平安集团官网，2026-10-14 登记） |
 | 全职招聘网 | quanzhi.com | 明细页 `/job/<长id>`、`/job/detail/<id>`；JD 完整可抓，常与智联同源 |
 | 企查查 | qcc.com | 明细页 `m.qcc.com/jobdetail/<32位id>.html`；JD 完整可抓 |
 | Bebee | bebee.com | 转载/聚合站，`/<地区>/jobs/<slug>`；JD 完整、含截止日期，可当明细页用（备注注明转载源） |
@@ -73,7 +73,7 @@
 
 ## 搜索结果形态与降级链（2026-09-22 实测，必读）
 
-当前搜索通道**不支持可靠的 `site:` 限定**——实测搜 `深圳 AI应用 招聘 site:51job.com`，返回结果里混进了 `jrzp.com`、转载站等非目标域内容。因此按"只收明细页"硬筛，很可能**一条都拿不到**。实际要按结果形态分三档处理：
+当前搜索通道**不支持可靠的 `site:` 限定**——实测搜 `{城市} {方向} 招聘 site:51job.com`，返回结果里混进了 `jrzp.com`、转载站等非目标域内容。因此按"只收明细页"硬筛，很可能**一条都拿不到**。实际要按结果形态分三档处理：
 
 | 形态 | 特征 | 处理 |
 |---|---|---|
@@ -123,7 +123,7 @@ EOF
 
 非 `detail` 的逐条处理：能补明细页就补（按上面的降级链）；补不到就改成定位链接 + 备注；带 `utm_*`/`pgRef`/`d_sfrom` 等跟踪参数的，**清洗成干净 URL**（只删来路/追踪参数，**带岗位 id 的参数不能删**——腾讯官网的 `?postId=` 删了就只剩一个键）。
 
-## 实测样本（2026-09 深圳 AI 方向，可作回归测试）
+## 抓取样本示例（用于验证数据可提取，可作回归测试）
 
 聚合页里抓到的真岗位（含薪资、地点，验证数据可提取）：
 

@@ -68,6 +68,7 @@ DETAIL_PATTERNS = {
     "zhaopin.com":  r"(/cc[a-z]?\d+j\d+\.htm|/job/[a-z0-9]{6,})",
     # —— 公司官网 / 官方招聘系统（域名与明细页形态都要核验，防假冒站）——
     "tencent.com":     r"/jobdesc\.html",
+    "pingan.com":      r"/recruit/position\.html",
     "sf-express.com":  r"/searchjobsearchbyid/\d+",
     "crc.com.cn":      r"/jobdetail|/position/\d+",
     # —— 垂直 / 转载 / 聚合站（JD 完整，可当明细页用，写入时备注注明来源）——
